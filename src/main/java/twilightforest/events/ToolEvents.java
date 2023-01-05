@@ -3,16 +3,26 @@ package twilightforest.events;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.entity.ProjectileImpactEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -20,10 +30,13 @@ import twilightforest.TwilightForestMod;
 import twilightforest.data.tags.BlockTagGenerator;
 import twilightforest.init.TFItems;
 import twilightforest.item.EnderBowItem;
+import twilightforest.item.GiantItem;
 import twilightforest.item.MazebreakerPickItem;
 import twilightforest.item.MinotaurAxeItem;
 
 import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = TwilightForestMod.ID)
 public class ToolEvents {
@@ -123,5 +136,101 @@ public class ToolEvents {
 				stack.hurtAndBreak(16, event.getPlayer(), (user) -> user.broadcastBreakEvent(InteractionHand.MAIN_HAND));
 			}
 		}
+	}
+
+	@SubscribeEvent
+	public static void onEntityInteract(PlayerInteractEvent event) {
+		if (event instanceof PlayerInteractEvent.EntityInteractSpecific entityInteractSpecific) {
+			checkEntityTooFar(entityInteractSpecific, entityInteractSpecific.getTarget(), entityInteractSpecific.getEntity(), entityInteractSpecific.getHand());
+		} else if (event instanceof PlayerInteractEvent.EntityInteract entityInteract) {
+			checkEntityTooFar(entityInteract, entityInteract.getTarget(), entityInteract.getEntity(), entityInteract.getHand());
+		} else if (event instanceof PlayerInteractEvent.RightClickBlock rightClickBlock) {
+			checkBlockTooFar(event, rightClickBlock.getEntity(), rightClickBlock.getHand());
+		} else if (event instanceof PlayerInteractEvent.RightClickItem rightClickItem) {
+			checkInteractionTooFar(event, rightClickItem.getEntity(), rightClickItem.getHand());
+		}
+	}
+
+	private static void checkEntityTooFar(PlayerInteractEvent event, Entity target, Player player, InteractionHand hand) {
+		if (!event.isCanceled()) {
+			ItemStack heldStack = player.getItemInHand(hand);
+			if (hasGiantItemInOneHand(player) && !(heldStack.getItem() instanceof GiantItem) && hand == InteractionHand.OFF_HAND) {
+				UUID uuidForOppositeHand = GiantItem.GIANT_RANGE_MODIFIER;
+				AttributeInstance attackRange = player.getAttribute(ForgeMod.ATTACK_RANGE.get());
+				if (attackRange != null) {
+					AttributeModifier giantModifier = attackRange.getModifier(uuidForOppositeHand);
+					if (giantModifier != null) {
+						double totalRange = player.getAttackRange();
+						double giantRange = giantModifier.getAmount();
+						double baseRange = totalRange - giantRange;
+						event.setCanceled(!player.isCloseEnough(target, baseRange));
+					}
+				}
+			}
+		}
+	}
+
+	private static void checkBlockTooFar(PlayerInteractEvent event, Player player, InteractionHand hand) {
+		if (!event.isCanceled()) {
+			ItemStack heldStack = player.getItemInHand(hand);
+			if (hasGiantItemInOneHand(player) && !(heldStack.getItem() instanceof GiantItem) && hand == InteractionHand.OFF_HAND) {
+				UUID uuidForOppositeHand = GiantItem.GIANT_REACH_MODIFIER;
+				AttributeInstance reachDistance = player.getAttribute(ForgeMod.REACH_DISTANCE.get());
+				if (reachDistance != null) {
+					AttributeModifier giantModifier = reachDistance.getModifier(uuidForOppositeHand);
+					if (giantModifier != null) {
+						double totalReach = player.getReachDistance();
+						double giantReach = giantModifier.getAmount();
+						double baseReach = totalReach - giantReach;
+						event.setCanceled(player.pick(baseReach, 0.0F, false).getType() != HitResult.Type.BLOCK);
+					}
+				}
+			}
+		}
+	}
+
+	private static void checkInteractionTooFar(PlayerInteractEvent event, Player player, InteractionHand hand) {
+		if (!event.isCanceled()) {
+			if (!event.isCanceled()) {
+				ItemStack heldStack = player.getItemInHand(hand);
+				if (hasGiantItemInOneHand(player) && !(heldStack.getItem() instanceof GiantItem) && hand == InteractionHand.OFF_HAND) {
+					UUID uuidForOppositeHand = GiantItem.GIANT_REACH_MODIFIER;
+					AttributeInstance reachDistance = player.getAttribute(ForgeMod.REACH_DISTANCE.get());
+					if (reachDistance != null) {
+						AttributeModifier giantModifier = reachDistance.getModifier(uuidForOppositeHand);
+						if (giantModifier != null) {
+							double totalReach = player.getReachDistance();
+							double giantReach = giantModifier.getAmount();
+							double baseReach = totalReach - giantReach;
+							if (player.pick(totalReach, 0.0F, true).getType() == HitResult.Type.BLOCK) {
+								event.setCanceled(getPlayerPOVHitResult(player.getLevel(), player, baseReach, ClipContext.Fluid.ANY).getType() != HitResult.Type.BLOCK);
+							} else if (player.pick(totalReach, 0.0F, false).getType() == HitResult.Type.BLOCK) {
+								event.setCanceled(getPlayerPOVHitResult(player.getLevel(), player, baseReach, ClipContext.Fluid.NONE).getType() != HitResult.Type.BLOCK);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private static boolean hasGiantItemInOneHand(Player player) {
+		ItemStack mainHandStack = player.getMainHandItem();
+		ItemStack offHandStack = player.getOffhandItem();
+		return (mainHandStack.getItem() instanceof GiantItem && !(offHandStack.getItem() instanceof GiantItem));
+	}
+
+	private static BlockHitResult getPlayerPOVHitResult(Level level, Player player, double reach, ClipContext.Fluid fluidClip) {
+		float f = player.getXRot();
+		float f1 = player.getYRot();
+		Vec3 vec3 = player.getEyePosition();
+		float f2 = Mth.cos(-f1 * ((float) Math.PI / 180.0F) - (float) Math.PI);
+		float f3 = Mth.sin(-f1 * ((float) Math.PI / 180.0F) - (float) Math.PI);
+		float f4 = -Mth.cos(-f * ((float) Math.PI / 180.0F));
+		float f5 = Mth.sin(-f * ((float) Math.PI / 180.0F));
+		float f6 = f3 * f4;
+		float f7 = f2 * f4;
+		Vec3 vec31 = vec3.add((double) f6 * reach, (double) f5 * reach, (double) f7 * reach);
+		return level.clip(new ClipContext(vec3, vec31, ClipContext.Block.OUTLINE, fluidClip, player));
 	}
 }
