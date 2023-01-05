@@ -163,7 +163,7 @@ public class ToolEvents {
 						double totalRange = player.getAttackRange();
 						double giantRange = giantModifier.getAmount();
 						double baseRange = totalRange - giantRange;
-						event.setCanceled(!player.isCloseEnough(target, baseRange));
+						event.setCanceled(!player.isCloseEnough(target, baseRange)); // Based on IForgePlayer#canInteractWith(Entity, double), but reversed.
 					}
 				}
 			}
@@ -182,7 +182,7 @@ public class ToolEvents {
 						double totalReach = player.getReachDistance();
 						double giantReach = giantModifier.getAmount();
 						double baseReach = totalReach - giantReach;
-						event.setCanceled(player.pick(baseReach, 0.0F, false).getType() != HitResult.Type.BLOCK);
+						event.setCanceled(player.pick(baseReach, 0.0F, false).getType() != HitResult.Type.BLOCK); // Based on usage in GameRenderer#pick(float).
 					}
 				}
 			}
@@ -202,6 +202,7 @@ public class ToolEvents {
 							double totalReach = player.getReachDistance();
 							double giantReach = giantModifier.getAmount();
 							double baseReach = totalReach - giantReach;
+							// Based on usage of Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid) for various Item#use(Level, Player, InteractionHand) methods.
 							if (player.pick(totalReach, 0.0F, true).getType() == HitResult.Type.BLOCK) {
 								event.setCanceled(getPlayerPOVHitResult(player.getLevel(), player, baseReach, ClipContext.Fluid.ANY).getType() != HitResult.Type.BLOCK);
 							} else if (player.pick(totalReach, 0.0F, false).getType() == HitResult.Type.BLOCK) {
@@ -220,6 +221,11 @@ public class ToolEvents {
 		return (mainHandStack.getItem() instanceof GiantItem && !(offHandStack.getItem() instanceof GiantItem));
 	}
 
+	/*
+		[VANILLA COPY]
+		Copied from Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid).
+		Uses a parameter for reach in assigning vec31 instead of using IForgePlayer#getReachDistance().
+	 */
 	private static BlockHitResult getPlayerPOVHitResult(Level level, Player player, double reach, ClipContext.Fluid fluidClip) {
 		float f = player.getXRot();
 		float f1 = player.getYRot();
