@@ -46,9 +46,11 @@ import net.minecraftforge.entity.PartEntity;
 import net.minecraftforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 import twilightforest.client.TFClientSetup;
+import twilightforest.events.ToolEvents;
 import twilightforest.init.TFDimensionSettings;
 import twilightforest.entity.TFPart;
 import twilightforest.init.TFItems;
+import twilightforest.item.GiantItem;
 import twilightforest.network.TFPacketHandler;
 import twilightforest.network.UpdateTFMultipartPacket;
 import twilightforest.world.components.structures.start.CustomStructureData;
@@ -238,44 +240,41 @@ public class ASMHooks {
 	 * [BEFORE ARETURN]
 	 */
 	public static BlockHitResult reach(BlockHitResult o, Level level, Player player, ClipContext.Fluid fluidMode) {
-		/*InteractionHand hand = ToolAbilityListener.INTERACTION_HAND;
+		InteractionHand hand = ToolEvents.INTERACTION_HAND;
 		if (hand != null) {
 			BlockHitResult hitResult = interactionTooFar(level, player, hand, fluidMode);
 			if (hitResult != null) {
 				return hitResult;
 			}
-		}*/
+		}
 		return o;
 	}
 
-	/**
-	 * Checks if a block-item interaction is too far away for the player to be able to interact with if they're trying to interact using a hand that doesn't contain a {@link ValkyrieTool}, but are still holding a Valkyrie Tool in another hand.
-	 * @param player The {@link Player} attempting to interact.
-	 * @param hand The {@link InteractionHand} used to interact.
-	 * @return Whether the player is too far to interact, as a {@link Boolean}.
-	 */
+	@Nullable
 	private static BlockHitResult interactionTooFar(Level level, Player player, InteractionHand hand, ClipContext.Fluid fluidMode) {
-		/*ItemStack heldStack = player.getItemInHand(hand);
-		if (AbilityHooks.ToolHooks.hasValkyrieItemInOneHand(player) && !(heldStack.getItem() instanceof ValkyrieTool)) {
-			UUID uuidForOppositeHand = hand == InteractionHand.MAIN_HAND ? ValkyrieTool.REACH_DISTANCE_MODIFIER_OFFHAND_UUID : ValkyrieTool.REACH_DISTANCE_MODIFIER_MAINHAND_UUID; // We're checking the hand being used to interact, which won't contain a Valkyrie Tool, so we must get the UUID of the opposite hand, which will contain a tool.
+		ItemStack heldStack = player.getItemInHand(hand);
+		if (ToolEvents.hasGiantItemInOneHand(player) && !(heldStack.getItem() instanceof GiantItem) && hand == InteractionHand.OFF_HAND) {
+			UUID uuidForOppositeHand = GiantItem.GIANT_REACH_MODIFIER;
 			AttributeInstance reachDistance = player.getAttribute(ForgeMod.REACH_DISTANCE.get());
 			if (reachDistance != null) {
-				AttributeModifier valkyrieModifier = reachDistance.getModifier(uuidForOppositeHand);
-				if (valkyrieModifier != null) {
-					reachDistance.removeModifier(valkyrieModifier);
+				AttributeModifier giantModifier = reachDistance.getModifier(uuidForOppositeHand);
+				if (giantModifier != null) {
+					reachDistance.removeModifier(giantModifier);
 					double reach = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
 					double trueReach = reach == 0 ? 0 : reach + (player.isCreative() ? 0.5 : 0); // Copied from IForgePlayer#getReachDistance().
 					BlockHitResult result = getPlayerPOVHitResultForReach(level, player, trueReach, fluidMode);
-					reachDistance.addTransientModifier(valkyrieModifier);
+					reachDistance.addTransientModifier(giantModifier);
 					return result;
 				}
 			}
-		}*/
+		}
 		return null;
 	}
 
-	/**
-	 * Based on {@link net.minecraft.world.item.Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid)}.
+	/*
+		[VANILLA COPY]
+		Copied from Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid).
+		Uses a parameter for reach in assigning vec31 instead of using IForgePlayer#getReachDistance().
 	 */
 	private static BlockHitResult getPlayerPOVHitResultForReach(Level level, Player player, double reach, ClipContext.Fluid fluidClip) {
 		float f = player.getXRot();

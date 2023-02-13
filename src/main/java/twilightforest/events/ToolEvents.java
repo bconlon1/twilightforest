@@ -44,6 +44,8 @@ public class ToolEvents {
 	private static final int KNIGHTMETAL_BONUS_DAMAGE = 2;
 	private static final int MINOTAUR_AXE_BONUS_DAMAGE = 7;
 
+	public static InteractionHand INTERACTION_HAND;
+
 	@SubscribeEvent
 	public static void onEnderBowHit(ProjectileImpactEvent evt) {
 		Projectile arrow = evt.getProjectile();
@@ -147,7 +149,7 @@ public class ToolEvents {
 		} else if (event instanceof PlayerInteractEvent.RightClickBlock rightClickBlock) {
 			checkBlockTooFar(event, rightClickBlock.getEntity(), rightClickBlock.getHand());
 		} else if (event instanceof PlayerInteractEvent.RightClickItem rightClickItem) {
-			checkInteractionTooFar(event, rightClickItem.getEntity(), rightClickItem.getHand());
+			INTERACTION_HAND = rightClickItem.getHand();
 		}
 	}
 
@@ -160,10 +162,12 @@ public class ToolEvents {
 				if (attackRange != null) {
 					AttributeModifier giantModifier = attackRange.getModifier(uuidForOppositeHand);
 					if (giantModifier != null) {
-						double totalRange = player.getAttackRange();
-						double giantRange = giantModifier.getAmount();
-						double baseRange = totalRange - giantRange;
-						event.setCanceled(!player.isCloseEnough(target, baseRange)); // Based on IForgePlayer#canInteractWith(Entity, double), but reversed.
+						attackRange.removeModifier(giantModifier);
+						double range = player.getAttributeValue(ForgeMod.ATTACK_RANGE.get());
+						double trueReach = range == 0 ? 0 : range + (player.isCreative() ? 3 : 0); // Copied from IForgePlayer#getAttackRange().
+						boolean tooFar = !player.isCloseEnough(target, trueReach);
+						attackRange.addTransientModifier(giantModifier);
+						event.setCanceled(tooFar);
 					}
 				}
 			}
@@ -179,64 +183,21 @@ public class ToolEvents {
 				if (reachDistance != null) {
 					AttributeModifier giantModifier = reachDistance.getModifier(uuidForOppositeHand);
 					if (giantModifier != null) {
-						double totalReach = player.getReachDistance();
-						double giantReach = giantModifier.getAmount();
-						double baseReach = totalReach - giantReach;
-						event.setCanceled(player.pick(baseReach, 0.0F, false).getType() != HitResult.Type.BLOCK); // Based on usage in GameRenderer#pick(float).
+						reachDistance.removeModifier(giantModifier);
+						double reach = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
+						double trueReach = reach == 0 ? 0 : reach + (player.isCreative() ? 0.5 : 0); // Copied from IForgePlayer#getReachDistance().
+						boolean tooFar = player.pick(trueReach, 0.0F, false).getType() != HitResult.Type.BLOCK;
+						reachDistance.addTransientModifier(giantModifier);
+						event.setCanceled(tooFar);
 					}
 				}
 			}
 		}
 	}
 
-	private static void checkInteractionTooFar(PlayerInteractEvent event, Player player, InteractionHand hand) {
-		if (!event.isCanceled()) {
-			if (!event.isCanceled()) {
-				ItemStack heldStack = player.getItemInHand(hand);
-				if (hasGiantItemInOneHand(player) && !(heldStack.getItem() instanceof GiantItem) && hand == InteractionHand.OFF_HAND) {
-					UUID uuidForOppositeHand = GiantItem.GIANT_REACH_MODIFIER;
-					AttributeInstance reachDistance = player.getAttribute(ForgeMod.REACH_DISTANCE.get());
-					if (reachDistance != null) {
-						AttributeModifier giantModifier = reachDistance.getModifier(uuidForOppositeHand);
-						if (giantModifier != null) {
-							double totalReach = player.getReachDistance();
-							double giantReach = giantModifier.getAmount();
-							double baseReach = totalReach - giantReach;
-							// Based on usage of Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid) for various Item#use(Level, Player, InteractionHand) methods.
-							if (player.pick(totalReach, 0.0F, true).getType() == HitResult.Type.BLOCK) {
-								event.setCanceled(getPlayerPOVHitResult(player.getLevel(), player, baseReach, ClipContext.Fluid.ANY).getType() != HitResult.Type.BLOCK);
-							} else if (player.pick(totalReach, 0.0F, false).getType() == HitResult.Type.BLOCK) {
-								event.setCanceled(getPlayerPOVHitResult(player.getLevel(), player, baseReach, ClipContext.Fluid.NONE).getType() != HitResult.Type.BLOCK);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	private static boolean hasGiantItemInOneHand(Player player) {
+	public static boolean hasGiantItemInOneHand(Player player) {
 		ItemStack mainHandStack = player.getMainHandItem();
 		ItemStack offHandStack = player.getOffhandItem();
 		return (mainHandStack.getItem() instanceof GiantItem && !(offHandStack.getItem() instanceof GiantItem));
-	}
-
-	/*
-		[VANILLA COPY]
-		Copied from Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid).
-		Uses a parameter for reach in assigning vec31 instead of using IForgePlayer#getReachDistance().
-	 */
-	private static BlockHitResult getPlayerPOVHitResult(Level level, Player player, double reach, ClipContext.Fluid fluidClip) {
-		float f = player.getXRot();
-		float f1 = player.getYRot();
-		Vec3 vec3 = player.getEyePosition();
-		float f2 = Mth.cos(-f1 * ((float) Math.PI / 180.0F) - (float) Math.PI);
-		float f3 = Mth.sin(-f1 * ((float) Math.PI / 180.0F) - (float) Math.PI);
-		float f4 = -Mth.cos(-f * ((float) Math.PI / 180.0F));
-		float f5 = Mth.sin(-f * ((float) Math.PI / 180.0F));
-		float f6 = f3 * f4;
-		float f7 = f2 * f4;
-		Vec3 vec31 = vec3.add((double) f6 * reach, (double) f5 * reach, (double) f7 * reach);
-		return level.clip(new ClipContext(vec3, vec31, ClipContext.Block.OUTLINE, fluidClip, player));
 	}
 }
