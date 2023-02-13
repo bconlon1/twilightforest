@@ -160,6 +160,20 @@ public class ItemTagGenerator extends ItemTagsProvider {
 		tag(ORES_KNIGHTMETAL).add(TFItems.ARMOR_SHARD_CLUSTER.get());
 
 		tag(PORTAL_ACTIVATOR).addTag(Tags.Items.GEMS_DIAMOND);
+		
+		tag(ItemTags.BOATS).add(
+				TFItems.TWILIGHT_OAK_BOAT.get(), TFItems.CANOPY_BOAT.get(), 
+				TFItems.MANGROVE_BOAT.get(), TFItems.DARKWOOD_BOAT.get(), 
+				TFItems.TIME_BOAT.get(), TFItems.TRANSFORMATION_BOAT.get(), 
+				TFItems.MINING_BOAT.get(), TFItems.SORTING_BOAT.get()
+		);
+
+		tag(ItemTags.CHEST_BOATS).add(
+				TFItems.TWILIGHT_OAK_CHEST_BOAT.get(), TFItems.CANOPY_CHEST_BOAT.get(),
+				TFItems.MANGROVE_CHEST_BOAT.get(), TFItems.DARKWOOD_CHEST_BOAT.get(),
+				TFItems.TIME_CHEST_BOAT.get(), TFItems.TRANSFORMATION_CHEST_BOAT.get(),
+				TFItems.MINING_CHEST_BOAT.get(), TFItems.SORTING_CHEST_BOAT.get()
+		);
 
 		tag(ItemTags.FREEZE_IMMUNE_WEARABLES).add(
 				TFItems.FIERY_HELMET.get(),
@@ -315,6 +329,8 @@ public class ItemTagGenerator extends ItemTagsProvider {
 		tag(Tags.Items.TOOLS_HOES).add(TFItems.IRONWOOD_HOE.get(), TFItems.STEELEAF_HOE.get());
 		tag(Tags.Items.TOOLS_SHIELDS).add(TFItems.KNIGHTMETAL_SHIELD.get());
 		tag(Tags.Items.TOOLS_BOWS).add(TFItems.TRIPLE_BOW.get(), TFItems.SEEKER_BOW.get(), TFItems.ICE_BOW.get(), TFItems.ENDER_BOW.get());
+
+		tag(ItemTags.SMALL_FLOWERS).add(TFBlocks.THORN_ROSE.get().asItem());
 	}
 
 	@Override

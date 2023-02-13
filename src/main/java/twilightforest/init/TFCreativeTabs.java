@@ -4,7 +4,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.*;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.EnchantedBookItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -15,8 +18,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.RegistryObject;
 import twilightforest.TwilightForestMod;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.List;
 
 @Mod.EventBusSubscriber(modid = TwilightForestMod.ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class TFCreativeTabs {
@@ -252,17 +255,15 @@ public class TFCreativeTabs {
 					output.accept(TFBlocks.ALPHA_YETI_TROPHY.get());
 					output.accept(TFBlocks.SNOW_QUEEN_TROPHY.get());
 					output.accept(TFBlocks.QUEST_RAM_TROPHY.get());
-					if (operator) {
-						output.accept(TFBlocks.NAGA_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.LICH_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.MINOSHROOM_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.HYDRA_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.KNIGHT_PHANTOM_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.UR_GHAST_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.ALPHA_YETI_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.SNOW_QUEEN_BOSS_SPAWNER.get());
-						output.accept(TFBlocks.FINAL_BOSS_BOSS_SPAWNER.get());
-					}
+					output.accept(TFBlocks.NAGA_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.LICH_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.MINOSHROOM_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.HYDRA_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.KNIGHT_PHANTOM_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.UR_GHAST_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.ALPHA_YETI_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.SNOW_QUEEN_BOSS_SPAWNER.get());
+					output.accept(TFBlocks.FINAL_BOSS_BOSS_SPAWNER.get());
 					output.accept(TFBlocks.TWILIGHT_PORTAL_MINIATURE_STRUCTURE.get());
 					output.accept(TFBlocks.NAGA_COURTYARD_MINIATURE_STRUCTURE.get());
 					output.accept(TFBlocks.LICH_TOWER_MINIATURE_STRUCTURE.get());
@@ -442,6 +443,22 @@ public class TFCreativeTabs {
 					output.accept(TFItems.ALPHA_YETI_BANNER_PATTERN.get());
 					output.accept(TFItems.SNOW_QUEEN_BANNER_PATTERN.get());
 					output.accept(TFItems.QUEST_RAM_BANNER_PATTERN.get());
+					output.accept(TFItems.TWILIGHT_OAK_BOAT.get());
+					output.accept(TFItems.CANOPY_BOAT.get());
+					output.accept(TFItems.MANGROVE_BOAT.get());
+					output.accept(TFItems.DARKWOOD_BOAT.get());
+					output.accept(TFItems.TIME_BOAT.get());
+					output.accept(TFItems.TRANSFORMATION_BOAT.get());
+					output.accept(TFItems.MINING_BOAT.get());
+					output.accept(TFItems.SORTING_BOAT.get());
+					output.accept(TFItems.TWILIGHT_OAK_CHEST_BOAT.get());
+					output.accept(TFItems.CANOPY_CHEST_BOAT.get());
+					output.accept(TFItems.MANGROVE_CHEST_BOAT.get());
+					output.accept(TFItems.DARKWOOD_CHEST_BOAT.get());
+					output.accept(TFItems.TIME_CHEST_BOAT.get());
+					output.accept(TFItems.TRANSFORMATION_CHEST_BOAT.get());
+					output.accept(TFItems.MINING_CHEST_BOAT.get());
+					output.accept(TFItems.SORTING_CHEST_BOAT.get());
 					createSpawnEggsAlphabetical(output);
 				}));
 
@@ -542,7 +559,7 @@ public class TFCreativeTabs {
 	}
 
 	private static void createSpawnEggsAlphabetical(CreativeModeTab.Output output) {
-		Collection<Item> eggs = TFEntities.SPAWN_EGGS.getEntries().stream().map(RegistryObject::get).collect(Collectors.toList());
+		Collection<Item> eggs = TFEntities.SPAWN_EGGS.getEntries().stream().map(RegistryObject::get).toList();
 		eggs.forEach(output::accept);
 	}
 

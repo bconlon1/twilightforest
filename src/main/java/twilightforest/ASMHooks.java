@@ -18,30 +18,41 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.sounds.Music;
 import net.minecraft.sounds.Musics;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.MapItem;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.world.level.levelgen.structure.pieces.PiecesContainer;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.entity.PartEntity;
 import net.minecraftforge.network.PacketDistributor;
 import org.joml.Matrix4f;
-import twilightforest.init.TFEntities;
+import twilightforest.client.TFClientSetup;
+import twilightforest.init.TFDimensionSettings;
 import twilightforest.entity.TFPart;
 import twilightforest.init.TFItems;
 import twilightforest.network.TFPacketHandler;
 import twilightforest.network.UpdateTFMultipartPacket;
-import twilightforest.world.components.structures.start.TFStructureStart;
+import twilightforest.world.components.structures.start.CustomStructureData;
 import twilightforest.world.registration.TFGenerationSettings;
-import twilightforest.init.TFFeatureModifiers;
 
 import org.jetbrains.annotations.Nullable;
 import java.util.*;
@@ -51,11 +62,11 @@ public class ASMHooks {
 
 	/**
 	 * Injection Point:<br>
-	 * {@link net.minecraft.world.level.levelgen.WorldGenSettings#WorldGenSettings(long, boolean, boolean, net.minecraft.core.Registry, Optional)}<br>
+	 * {@link net.minecraft.world.level.levelgen.WorldOptions#WorldOptions(long, boolean, boolean, Optional)} <br>
 	 * [BEFORE FIRST PUTFIELD]
 	 */
 	public static long seed(long seed) {
-		TFFeatureModifiers.seed = seed;
+		TFDimensionSettings.seed = seed;
 		return seed;
 	}
 
@@ -65,7 +76,7 @@ public class ASMHooks {
 	 * [BEFORE FIRST ASTORE]
 	 */
 	public static Dynamic<Tag> seed(Dynamic<Tag> seed) {
-		TFFeatureModifiers.seed = ((CompoundTag) seed.getValue()).getLong("seed");
+		TFDimensionSettings.seed = ((CompoundTag) seed.getValue()).getLong("seed");
 		return seed;
 	}
 
@@ -144,7 +155,7 @@ public class ASMHooks {
 	@OnlyIn(Dist.CLIENT)
 	public static EntityRenderer<?> getMultipartRenderer(@Nullable EntityRenderer<?> renderer, Entity entity) {
 		if(entity instanceof TFPart<?>)
-			return TFEntities.BakedMultiPartRenderers.lookup(((TFPart<?>) entity).renderer());
+			return TFClientSetup.BakedMultiPartRenderers.lookup(((TFPart<?>) entity).renderer());
 		return renderer;
 	}
 
@@ -155,7 +166,7 @@ public class ASMHooks {
 	 */
 	@OnlyIn(Dist.CLIENT)
 	public static EntityRendererProvider.Context bakeMultipartRenders(EntityRendererProvider.Context context) {
-		TFEntities.BakedMultiPartRenderers.bakeMultiPartRenderers(context);
+		TFClientSetup.BakedMultiPartRenderers.bakeMultiPartRenderers(context);
 		return context;
 	}
 
@@ -183,18 +194,19 @@ public class ASMHooks {
 	 * {@link net.minecraft.client.renderer.BiomeColors#FOLIAGE_COLOR_RESOLVER}<br>
 	 * [BEFORE IRETURN]
 	 */
+	@OnlyIn(Dist.CLIENT)
 	public static int foliage(int o, Biome biome, double x, double z) {
 		return FoliageColorHandler.get(o, biome, x, z);
 	}
 
 	/**
 	 * Injection Point:<br>
-	 * {@link net.minecraft.world.level.levelgen.feature.StructureFeature#loadStaticStart(ServerLevel, CompoundTag, long)} <br>
-	 * [AFTER {@link net.minecraft.world.level.levelgen.feature.StructureFeature#createStart(ChunkPos, int, long)}]
+	 * {@link net.minecraft.world.level.levelgen.structure.StructureStart#loadStaticStart(StructurePieceSerializationContext, CompoundTag, long)} <br>
+	 * [AFTER INVOKESPECIAL {@link net.minecraft.world.level.levelgen.structure.StructureStart#StructureStart(Structure, ChunkPos, int, PiecesContainer)}]
 	 */
-	public static StructureStart conquered(StructureStart start, CompoundTag nbt) {
-		if (start instanceof TFStructureStart<?> s)
-			s.load(nbt);
+	public static StructureStart conquered(StructureStart start, PiecesContainer piecesContainer, CompoundTag nbt) {
+		if (start.getStructure() instanceof CustomStructureData s)
+			return s.forDeserialization(start.getStructure(), start.getChunkPos(), start.getReferences(), piecesContainer, nbt);
 		return start;
 	}
 
@@ -219,4 +231,64 @@ public class ASMHooks {
 			return Component.translatable(component.getString());
 		} else return component;
 	}
+
+	/**
+	 * Injection Point:<br>
+	 * {@link net.minecraft.world.item.Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid)}<br>
+	 * [BEFORE ARETURN]
+	 */
+	public static BlockHitResult reach(BlockHitResult o, Level level, Player player, ClipContext.Fluid fluidMode) {
+		/*InteractionHand hand = ToolAbilityListener.INTERACTION_HAND;
+		if (hand != null) {
+			BlockHitResult hitResult = interactionTooFar(level, player, hand, fluidMode);
+			if (hitResult != null) {
+				return hitResult;
+			}
+		}*/
+		return o;
+	}
+
+	/**
+	 * Checks if a block-item interaction is too far away for the player to be able to interact with if they're trying to interact using a hand that doesn't contain a {@link ValkyrieTool}, but are still holding a Valkyrie Tool in another hand.
+	 * @param player The {@link Player} attempting to interact.
+	 * @param hand The {@link InteractionHand} used to interact.
+	 * @return Whether the player is too far to interact, as a {@link Boolean}.
+	 */
+	private static BlockHitResult interactionTooFar(Level level, Player player, InteractionHand hand, ClipContext.Fluid fluidMode) {
+		/*ItemStack heldStack = player.getItemInHand(hand);
+		if (AbilityHooks.ToolHooks.hasValkyrieItemInOneHand(player) && !(heldStack.getItem() instanceof ValkyrieTool)) {
+			UUID uuidForOppositeHand = hand == InteractionHand.MAIN_HAND ? ValkyrieTool.REACH_DISTANCE_MODIFIER_OFFHAND_UUID : ValkyrieTool.REACH_DISTANCE_MODIFIER_MAINHAND_UUID; // We're checking the hand being used to interact, which won't contain a Valkyrie Tool, so we must get the UUID of the opposite hand, which will contain a tool.
+			AttributeInstance reachDistance = player.getAttribute(ForgeMod.REACH_DISTANCE.get());
+			if (reachDistance != null) {
+				AttributeModifier valkyrieModifier = reachDistance.getModifier(uuidForOppositeHand);
+				if (valkyrieModifier != null) {
+					reachDistance.removeModifier(valkyrieModifier);
+					double reach = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
+					double trueReach = reach == 0 ? 0 : reach + (player.isCreative() ? 0.5 : 0); // Copied from IForgePlayer#getReachDistance().
+					BlockHitResult result = getPlayerPOVHitResultForReach(level, player, trueReach, fluidMode);
+					reachDistance.addTransientModifier(valkyrieModifier);
+					return result;
+				}
+			}
+		}*/
+		return null;
+	}
+
+	/**
+	 * Based on {@link net.minecraft.world.item.Item#getPlayerPOVHitResult(Level, Player, ClipContext.Fluid)}.
+	 */
+	private static BlockHitResult getPlayerPOVHitResultForReach(Level level, Player player, double reach, ClipContext.Fluid fluidClip) {
+		float f = player.getXRot();
+		float f1 = player.getYRot();
+		Vec3 vec3 = player.getEyePosition();
+		float f2 = Mth.cos(-f1 * ((float) Math.PI / 180.0F) - (float) Math.PI);
+		float f3 = Mth.sin(-f1 * ((float) Math.PI / 180.0F) - (float) Math.PI);
+		float f4 = -Mth.cos(-f * ((float) Math.PI / 180.0F));
+		float f5 = Mth.sin(-f * ((float) Math.PI / 180.0F));
+		float f6 = f3 * f4;
+		float f7 = f2 * f4;
+		Vec3 vec31 = vec3.add((double) f6 * reach, (double) f5 * reach, (double) f7 * reach);
+		return level.clip(new ClipContext(vec3, vec31, ClipContext.Block.OUTLINE, fluidClip, player));
+	}
+
 }

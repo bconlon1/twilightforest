@@ -8,10 +8,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
+import net.minecraftforge.client.ForgeRenderTypes;
 import net.minecraftforge.client.model.generators.ItemModelBuilder;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.client.model.generators.ModelFile;
-import net.minecraftforge.client.model.generators.loaders.ItemLayersModelBuilder;
+import net.minecraftforge.client.model.generators.loaders.ItemLayerModelBuilder;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -105,6 +106,10 @@ public class ItemModelGenerator extends ItemModelProvider {
 		toBlock(TFBlocks.MOSSY_CASTLE_BRICK_STAIRS.get());
 		toBlock(TFBlocks.ENCASED_CASTLE_BRICK_STAIRS.get());
 		toBlock(TFBlocks.BOLD_CASTLE_BRICK_STAIRS.get());
+		toBlock(TFBlocks.PINK_CASTLE_DOOR.get());
+		toBlock(TFBlocks.YELLOW_CASTLE_DOOR.get());
+		toBlock(TFBlocks.BLUE_CASTLE_DOOR.get());
+		toBlock(TFBlocks.VIOLET_CASTLE_DOOR.get());
 		toBlockModel(TFBlocks.YELLOW_CASTLE_RUNE_BRICK.get(), "castle_rune_inventory");
 		toBlockModel(TFBlocks.VIOLET_CASTLE_RUNE_BRICK.get(), "castle_rune_inventory");
 		toBlockModel(TFBlocks.PINK_CASTLE_RUNE_BRICK.get(), "castle_rune_inventory");
@@ -469,10 +474,8 @@ public class ItemModelGenerator extends ItemModelProvider {
 		singleTex(TFItems.CHARM_OF_LIFE_1);
 		singleTex(TFItems.CHARM_OF_LIFE_2);
 		singleTexFullbright(TFItems.TOWER_KEY);
-		//TODO layer 1 has an emissivity of 7, layer 2 has 15
 		generated(TFItems.BORER_ESSENCE.getId().getPath(), prefix("item/" + TFItems.BORER_ESSENCE.getId().getPath()), prefix("item/borer_essence_particles"));
-		//TODO has an emissivity of 7
-		singleTex(TFItems.CARMINITE);
+		buildItem(TFItems.CARMINITE.getId().getPath(), "item/generated", 7, prefix("item/" + TFItems.CARMINITE.getId().getPath()));
 		singleTex(TFItems.ARMOR_SHARD);
 		singleTex(TFItems.ARMOR_SHARD_CLUSTER);
 		singleTex(TFItems.KNIGHTMETAL_INGOT);
@@ -603,6 +606,24 @@ public class ItemModelGenerator extends ItemModelProvider {
 		singleTex(TFItems.MUSIC_DISC_THREAD);
 		singleTex(TFItems.MUSIC_DISC_WAYFARER);
 
+		singleTex(TFItems.TWILIGHT_OAK_BOAT);
+		singleTex(TFItems.CANOPY_BOAT);
+		singleTex(TFItems.MANGROVE_BOAT);
+		singleTex(TFItems.DARKWOOD_BOAT);
+		singleTex(TFItems.TIME_BOAT);
+		singleTex(TFItems.TRANSFORMATION_BOAT);
+		singleTex(TFItems.MINING_BOAT);
+		singleTex(TFItems.SORTING_BOAT);
+
+		singleTex(TFItems.TWILIGHT_OAK_CHEST_BOAT);
+		singleTex(TFItems.CANOPY_CHEST_BOAT);
+		singleTex(TFItems.MANGROVE_CHEST_BOAT);
+		singleTex(TFItems.DARKWOOD_CHEST_BOAT);
+		singleTex(TFItems.TIME_CHEST_BOAT);
+		singleTex(TFItems.TRANSFORMATION_CHEST_BOAT);
+		singleTex(TFItems.MINING_CHEST_BOAT);
+		singleTex(TFItems.SORTING_CHEST_BOAT);
+
 		generated(TFItems.NAGA_BANNER_PATTERN.getId().getPath(), prefix("item/tf_banner_pattern"));
 		generated(TFItems.LICH_BANNER_PATTERN.getId().getPath(), prefix("item/tf_banner_pattern"));
 		generated(TFItems.MINOSHROOM_BANNER_PATTERN.getId().getPath(), prefix("item/tf_banner_pattern"));
@@ -621,27 +642,27 @@ public class ItemModelGenerator extends ItemModelProvider {
 	}
 
 	private void fullbright(String name, ResourceLocation... layers) {
-		buildItem(name, "item/generated", true, layers);
+		buildItem(name, "item/generated", 15, layers);
 	}
 
 	private ItemModelBuilder fullbrightTool(String name, ResourceLocation... layers) {
-		return buildItem(name, "item/handheld", true, layers);
+		return buildItem(name, "item/handheld", 15, layers);
 	}
 
 	private ItemModelBuilder generated(String name, ResourceLocation... layers) {
-		return buildItem(name, "item/generated", false, layers);
+		return buildItem(name, "item/generated", 0, layers);
 	}
 
 	private ItemModelBuilder tool(String name, ResourceLocation... layers) {
-		return buildItem(name, "item/handheld", false, layers);
+		return buildItem(name, "item/handheld", 0, layers);
 	}
 
-	private ItemModelBuilder buildItem(String name, String parent, boolean fullbright, ResourceLocation... layers) {
+	private ItemModelBuilder buildItem(String name, String parent, int emissivity, ResourceLocation... layers) {
 		ItemModelBuilder builder = withExistingParent(name, parent);
 		for (int i = 0; i < layers.length; i++) {
 			builder = builder.texture("layer" + i, layers[i]);
 		}
-		if (fullbright) builder = builder.customLoader(ItemLayersModelBuilder::begin).emissive(0).end();
+		if (emissivity > 0) builder = builder.customLoader(ItemLayerModelBuilder::begin).emissive(emissivity, emissivity, 0).renderType("forge_entity_unsorted_translucent", 0).end();
 		return builder;
 	}
 
@@ -650,7 +671,7 @@ public class ItemModelGenerator extends ItemModelProvider {
 		for (int i = 0; i < layers.length; i++) {
 			builder = builder.texture("layer" + i, layers[i]);
 		}
-		builder = builder.customLoader(ItemLayersModelBuilder::begin).emissive(0).renderType(new ResourceLocation("translucent"), 0).end();
+		builder = builder.customLoader(ItemLayerModelBuilder::begin).emissive(15, 15, 0).renderType(new ResourceLocation("translucent"), 0).end();
 		return builder;
 	}
 
@@ -697,7 +718,7 @@ public class ItemModelGenerator extends ItemModelProvider {
 	}
 
 	private ItemModelBuilder phaseTex(String name, ResourceLocation... layers) {
-		ItemModelBuilder builder = withExistingParent(name, "twilightforest:item/util/readable");
+		ItemModelBuilder builder = withExistingParent(name, "twilightforest:item/moon_dial_template");
 		for (int i = 0; i < layers.length; i++) {
 			builder = builder.texture("layer" + i, layers[i]);
 		}
