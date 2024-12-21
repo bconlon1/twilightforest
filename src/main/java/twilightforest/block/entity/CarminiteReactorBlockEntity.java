@@ -5,6 +5,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -133,7 +134,7 @@ public class CarminiteReactorBlockEntity extends BlockEntity {
 				if (te.counter >= 350) {
 					// deactivate & explode
 					level.destroyBlock(pos, false);
-					level.explode(null, TFDamageTypes.getDamageSource(level, TFDamageTypes.REACTOR), null, pos.getX(), pos.getY(), pos.getZ(), 4.0F, true, Level.ExplosionInteraction.BLOCK);
+					level.explode(null, level.damageSources().source(TFDamageTypes.REACTOR), null, pos.getX(), pos.getY(), pos.getZ(), 4.0F, true, Level.ExplosionInteraction.BLOCK);
 
 					// spawn mini ghasts near the secondary & tertiary points
 					for (int i = 0; i < 3; i++) {
@@ -151,7 +152,7 @@ public class CarminiteReactorBlockEntity extends BlockEntity {
 	}
 
 	private void spawnGhastNear(Level level, int x, int y, int z) {
-		CarminiteGhastling ghast = TFEntities.CARMINITE_GHASTLING.get().create(level);
+		CarminiteGhastling ghast = TFEntities.CARMINITE_GHASTLING.get().create(level, EntitySpawnReason.TRIGGERED);
 		if (ghast != null) {
 			ghast.moveTo(x - 1.5 + level.getRandom().nextFloat() * 3.0, y - 1.5 + level.getRandom().nextFloat() * 3.0, z - 1.5 + level.getRandom().nextFloat() * 3.0, level.getRandom().nextFloat() * 360F, 0.0F);
 			level.addFreshEntity(ghast);
@@ -212,7 +213,7 @@ public class CarminiteReactorBlockEntity extends BlockEntity {
 
 		if (netherTransform && stateThere.getBlock() != Blocks.AIR) {
 			Optional<Block> optional = BuiltInRegistries.BLOCK
-				.getTag(BlockTagGenerator.CARMINITE_REACTOR_ORES)
+				.get(BlockTagGenerator.CARMINITE_REACTOR_ORES)
 				.flatMap(tag -> tag.getRandomElement(this.getLevel().getRandom()))
 				.map(Holder::value);
 			this.getLevel().setBlock(pos, (this.getLevel().getRandom().nextInt(8) == 0 && optional.isPresent() ? optional.get().defaultBlockState() : Blocks.NETHERRACK.defaultBlockState()), 3);

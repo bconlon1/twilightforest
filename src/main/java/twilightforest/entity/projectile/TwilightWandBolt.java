@@ -4,6 +4,7 @@ import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityEvent;
@@ -25,7 +26,6 @@ public class TwilightWandBolt extends TFThrowable {
 		super(type, world);
 	}
 
-	@SuppressWarnings("this-escape")
 	public TwilightWandBolt(Level world, LivingEntity thrower) {
 		super(TFEntities.WAND_BOLT.get(), world, thrower);
 		this.shootFromRotation(thrower, thrower.getXRot(), thrower.getYRot(), 0, 1.5F, 1.0F);
@@ -75,8 +75,7 @@ public class TwilightWandBolt extends TFThrowable {
 	@Override
 	protected void onHitEntity(EntityHitResult result) {
 		super.onHitEntity(result);
-		if (!this.level().isClientSide()) {
-			result.getEntity().hurt(TFDamageTypes.getIndirectEntityDamageSource(this.level(), TFDamageTypes.TWILIGHT_SCEPTER, this, this.getOwner()), 6);
+		if (this.level() instanceof ServerLevel level && result.getEntity().hurtServer(level, level.damageSources().source(TFDamageTypes.TWILIGHT_SCEPTER, this, this.getOwner()), 6)) {
 			this.level().playSound(null, result.getEntity().blockPosition(), TFSounds.TWILIGHT_SCEPTER_HIT.get(), this.getOwner() != null ? this.getOwner().getSoundSource() : SoundSource.PLAYERS);
 			this.level().broadcastEntityEvent(this, (byte) 3);
 			this.discard();
@@ -94,9 +93,7 @@ public class TwilightWandBolt extends TFThrowable {
 	}
 
 	@Override
-	public boolean hurt(DamageSource source, float amount) {
-		super.hurt(source, amount);
-
+	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
 		if (!this.level().isClientSide() && source.getEntity() != null) {
 			Vec3 vec3d = source.getEntity().getLookAngle();
 			// reflect faster and more accurately
@@ -108,6 +105,6 @@ public class TwilightWandBolt extends TFThrowable {
 			return true;
 		}
 
-		return false;
+		return super.hurtServer(level, source, amount);
 	}
 }

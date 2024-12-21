@@ -20,6 +20,7 @@ import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.Monster;
@@ -37,6 +38,7 @@ public class LoyalZombie extends TamableAnimal {
 
 	public LoyalZombie(EntityType<? extends LoyalZombie> type, Level world) {
 		super(type, world);
+		this.xpReward = 0;
 	}
 
 	@Override
@@ -66,8 +68,8 @@ public class LoyalZombie extends TamableAnimal {
 	}
 
 	@Override
-	public boolean doHurtTarget(Entity entity) {
-		boolean success = entity.hurt(this.damageSources().mobAttack(this), 7.0F);
+	public boolean doHurtTarget(ServerLevel level, Entity entity) {
+		boolean success = entity.hurtServer(level, this.damageSources().mobAttack(this), 7.0F);
 
 		if (success) {
 			entity.push(0.0D, 0.2D, 0.0D);
@@ -77,16 +79,15 @@ public class LoyalZombie extends TamableAnimal {
 	}
 
 	@Override
-	public void aiStep() {
+	protected void customServerAiStep(ServerLevel level) {
 		// once our damage boost effect wears out, start to decay
 		// the effect here is that we die shortly after our 60 second lifespan
-		if (!this.level().isClientSide() && this.getEffect(MobEffects.DAMAGE_BOOST) == null) {
+		if (this.getEffect(MobEffects.DAMAGE_BOOST) == null) {
 			if (this.tickCount % 20 == 0) {
-				this.hurt(TFDamageTypes.getDamageSource(this.level(), TFDamageTypes.EXPIRED), 2);
+				this.hurtServer(level, this.damageSources().source(TFDamageTypes.EXPIRED), 2);
 			}
 		}
-
-		super.aiStep();
+		super.customServerAiStep(level);
 	}
 
 	@Override
@@ -98,7 +99,7 @@ public class LoyalZombie extends TamableAnimal {
 			this.heal(1.0F);
 			this.playSound(SoundEvents.ZOMBIE_INFECT, this.getSoundVolume(), this.getVoicePitch());
 			player.getItemInHand(hand).consume(1, player);
-			return InteractionResult.sidedSuccess(this.level().isClientSide());
+			return InteractionResult.SUCCESS;
 		}
 
 		return super.interactAt(player, vec3, hand);
@@ -109,18 +110,18 @@ public class LoyalZombie extends TamableAnimal {
 	 */
 	@Override
 	public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
-		if (!(target instanceof Creeper) && !(target instanceof Ghast)) {
-			if (target instanceof LoyalZombie zombie) {
-				return !zombie.isTame() || zombie.getOwner() != owner;
-			} else if (target instanceof Player pTarget && owner instanceof Player pOwner && !pOwner.canHarmPlayer(pTarget)) {
-				return false;
-			} else if (target instanceof AbstractHorse horse && horse.isTamed()) {
-				return false;
-			} else {
-				return !(target instanceof TamableAnimal animal) || !animal.isTame();
-			}
-		} else {
+		if (target instanceof Creeper || target instanceof Ghast || target instanceof ArmorStand) {
 			return false;
+		} else if (target instanceof LoyalZombie zombie) {
+			return !zombie.isTame() || zombie.getOwner() != owner;
+		} else {
+			return switch (target) {
+				case Player player when owner instanceof Player player1 && !player1.canHarmPlayer(player) -> false;
+				case AbstractHorse abstracthorse when abstracthorse.isTamed() -> false;
+				case TamableAnimal tamableanimal when tamableanimal.isTame() -> false;
+				default -> true;
+			};
+
 		}
 	}
 
@@ -152,10 +153,5 @@ public class LoyalZombie extends TamableAnimal {
 	@Override
 	protected void playStepSound(BlockPos pos, BlockState state) {
 		playSound(TFSounds.LOYAL_ZOMBIE_STEP.get(), 0.15F, 1.0F);
-	}
-
-	@Override
-	protected void dropExperience(@Nullable Entity entity) {
-
 	}
 }

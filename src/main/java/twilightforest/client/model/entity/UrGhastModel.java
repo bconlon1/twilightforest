@@ -14,9 +14,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import twilightforest.TwilightForestMod;
 import twilightforest.client.renderer.entity.UrGhastRenderer;
-import twilightforest.entity.boss.UrGhast;
+import twilightforest.client.state.TFGhastRenderState;
 
-public class UrGhastModel extends TFGhastModel<UrGhast> implements TrophyBlockModel {
+public class UrGhastModel extends TFGhastModel implements TrophyBlockModel {
 
 	private final ModelPart[][] tentacles = new ModelPart[9][4];
 	private final ModelPart body;
@@ -87,11 +87,11 @@ public class UrGhastModel extends TFGhastModel<UrGhast> implements TrophyBlockMo
 	}
 
 	@Override
-	public void setupAnim(UrGhast entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-		super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+	public void setupAnim(TFGhastRenderState state) {
+		super.setupAnim(state);
 
 		// wave tentacles
-		this.waveTentacles(limbSwingAmount, ageInTicks);
+		this.waveTentacles(state.walkAnimationSpeed, state.ageInTicks);
 	}
 
 	private void waveTentacles(float limbSwingAmount, float ageInTicks) {
